@@ -1,0 +1,111 @@
+# name: Deploy to GAE
+
+# # Controls when the workflow will run
+# on:
+#   push:
+#     branches: [ feature-uzafir ]
+#   pull_request:
+#     branches: [ feature-uzafir ]
+
+#   # Allows you to run this workflow manually from the Actions tab
+#   workflow_dispatch:
+
+# # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# jobs:
+#   deploy:
+#     name: Deploying to Google Cloud
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v2
+
+#     - name: Setup Node
+#       uses: actions/setup-node@v2
+#       with:
+#         node-version: 18.12.1
+
+#     - name: Check NPM version
+#       run: npm --version
+#     - name: Check Node version
+#       run: node --version
+#     - name: Building frontend
+#       run: |  
+#           npm dedupe --force
+#           npm ci --force
+#           CI= npm run build --bail
+#     - name: Deploy to App Engine
+#       uses: google-github-actions/deploy-appengine@v0.2.0
+#       with:
+#         project_id: ${{ secrets.GCLOUD_PROJECTID }}
+#         service_account_key: ${{ secrets.GCLOUD_APP_DEPLOYER_ACCOUNT}}
+#         export_default_credentials: true
+
+#     - name: Listing gcloud configurations
+#       run: gcloud config list     
+
+#     - name: Configure Docker
+#       run: gcloud auth configure-docker
+
+#     - name: Build and push Docker image
+#       uses: docker/build-push-action@v2
+#       with:
+#         context: .
+#         push: true
+#         tags: gcr.io/${{ secrets.GCLOUD_PROJECTID }}/ovo-chatbot-frontend
+
+
+#     - name: Deploy to Cloud Run
+#       run: gcloud run deploy ovo-chatbot-frontend --image gcr.io/${{ secrets.GCLOUD_PROJECTID }}/ovo-chatbot-frontend --platform managed --project=${{ secrets.GCLOUD_PROJECTID }} --allow-unauthenticated --region us-central1 --memory=1Gi
+
+#     - name: Delete previous images
+#       run: |
+#         images=$(gcloud container images list-tags gcr.io/${{ secrets.GCLOUD_PROJECTID }}/ovo-chatbot-frontend --format='get(digest)')
+#         images_array=()
+#         while IFS= read -r line; do
+#           images_array+=("$line")
+#         done <<< "$images"
+#         for (( i=1; i<${#images_array[@]}; i++ ))
+#         do
+#           gcloud container images delete gcr.io/${{ secrets.GCLOUD_PROJECTID }}/ovo-chatbot-frontend@${images_array[i]} --force-delete-tags --quiet
+#         done
+
+
+
+name: Deploy to GAE
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [feature-uzafir]
+
+  workflow_dispatch:
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+
+# This Job runs for developer mode
+jobs:
+  deploy:
+    name: Deploying to Google Cloud
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup Node
+      uses: actions/setup-node@v2
+      # with:
+      #   node-version: 18.12.1
+
+    - name: Check NPM version
+      run: npm --version
+    - name: Check Node version
+      run: node --version
+    - name: Building frontend
+      run: |  
+          npm install --force
+          CI= npm run build
+    - name: Deploy to App Engine
+      uses: google-github-actions/deploy-appengine@v0.2.0
+      with:
+        deliverables: app.yaml
+        version: v1
+        project_id: ${{ secrets.GCLOUD_PROJECTID }}
+        credentials: ${{ secrets.GCLOUD_APP_DEPLOYER_ACCOUNT }}
